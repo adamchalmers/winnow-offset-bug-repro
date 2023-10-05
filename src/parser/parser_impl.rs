@@ -1,20 +1,15 @@
 use winnow::{combinator::repeat, error::StrContext::Label, prelude::*, token::any};
 
-use crate::{
-    errors::{KclError, KclErrorDetails},
-    token::{Token, TokenType},
-};
+use crate::token::{Token, TokenType};
 
 type TokenSlice<'slice, 'input> = &'slice mut &'input [Token];
 
 /// Parse a KCL string literal
 pub fn string_literal(i: TokenSlice) -> PResult<Token> {
     let token = any
-        .try_map(|token: Token| match token.token_type {
-            TokenType::String => Ok(token),
-            _ => Err(KclError::Syntax(KclErrorDetails {
-                message: "invalid string literal".to_owned(),
-            })),
+        .verify_map(|token: Token| match token.token_type {
+            TokenType::String => Some(token),
+            _ => None,
         })
         .context(Label("string literal (like \"myPart\""))
         .parse_next(i)?;
@@ -23,17 +18,11 @@ pub fn string_literal(i: TokenSlice) -> PResult<Token> {
 
 /// Parse some whitespace (i.e. at least one whitespace token)
 fn whitespace(i: TokenSlice) -> PResult<Token> {
-    any.try_map(|token: Token| {
+    any.verify_map(|token: Token| {
         if token.token_type == TokenType::Whitespace {
-            Ok(token)
+            Some(token)
         } else {
-            Err(KclError::Syntax(KclErrorDetails {
-                message: format!(
-                    "expected whitespace, found '{}' which is {:?}",
-                    token.value.as_str(),
-                    token.token_type
-                ),
-            }))
+            None
         }
     })
     .context(Label("some whitespace (e.g. spaces, tabs, new lines)"))
@@ -51,16 +40,13 @@ fn equals(i: TokenSlice) -> PResult<Token> {
 
 /// Parse a variable/constant declaration.
 pub fn declaration(i: TokenSlice) -> PResult<()> {
-    const EXPECTED: &str = "expected a variable declaration keyword (e.g. 'let') but found";
     let _kind = any
-        .try_map(|token: Token| {
+        .verify_map(|token: Token| {
             let Some(kind) = token.declaration_keyword() else {
-                return Err(KclError::Syntax(KclErrorDetails {
-                    message: format!("{EXPECTED} {}", token.value.as_str()),
-                }));
+                return None;
             };
 
-            Ok(kind)
+            Some(kind)
         })
         .context(Label("declaring a name, e.g. 'let width = 3'"))
         .parse_next(i)?;
@@ -80,17 +66,11 @@ pub fn declaration(i: TokenSlice) -> PResult<()> {
 
 /// Parse a KCL identifier (name of a constant/variable/function)
 fn identifier(i: TokenSlice) -> PResult<Token> {
-    any.try_map(|token: Token| {
+    any.verify_map(|token: Token| {
         if token.token_type == TokenType::Word {
-            Ok(token)
+            Some(token)
         } else {
-            Err(KclError::Syntax(KclErrorDetails {
-                message: format!(
-                    "{} is not an identifier, it is a {:?}",
-                    token.value.as_str(),
-                    token.token_type
-                ),
-            }))
+            None
         }
     })
     .context(Label("an identifier, e.g. 'width' or 'myPart'"))
