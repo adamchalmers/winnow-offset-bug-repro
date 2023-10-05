@@ -1,14 +1,9 @@
 use parse_display::{Display, FromStr};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
 use crate::ast::types::VariableKind;
 
 /// The types of tokens.
-#[derive(
-    Debug, PartialEq, Eq, Copy, Clone, Deserialize, Serialize, JsonSchema, FromStr, Display,
-)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, FromStr, Display)]
 #[display(style = "camelCase")]
 pub enum TokenType {
     /// A word.
@@ -23,14 +18,9 @@ pub enum TokenType {
     Whitespace,
 }
 
-#[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Token {
-    #[serde(rename = "type")]
     pub token_type: TokenType,
-    /// Offset in the source code where this token begins.
-    pub start: usize,
-    /// Offset in the source code where this token ends.
-    pub end: usize,
     pub value: String,
 }
 

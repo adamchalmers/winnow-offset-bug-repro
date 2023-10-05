@@ -1,43 +1,35 @@
 //! Data types for the AST.
 
 use parse_display::{Display, FromStr};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Program {
     pub body: Vec<BodyItem>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
-#[serde(tag = "type")]
+#[derive(Debug, Clone, PartialEq)]
 pub enum BodyItem {
     ExpressionStatement(ExpressionStatement),
     VariableDeclaration(VariableDeclaration),
 }
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
-#[serde(tag = "type")]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Literal(Box<Literal>),
     Identifier(Box<Identifier>),
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
-#[serde(tag = "type")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ExpressionStatement {
     pub expression: Value,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
-#[serde(tag = "type")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct VariableDeclaration {
     pub declarations: Vec<VariableDeclarator>,
     pub kind: VariableKind, // Change to enum if there are specific values
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema, FromStr, Display)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Clone, PartialEq, FromStr, Display)]
 #[display(style = "snake_case")]
 pub enum VariableKind {
     /// Declare a variable.
@@ -50,8 +42,7 @@ pub enum VariableKind {
     Var,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
-#[serde(tag = "type")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct VariableDeclarator {
     /// The identifier of the variable.
     pub id: Identifier,
@@ -68,8 +59,7 @@ impl VariableDeclarator {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
-#[serde(tag = "type")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Literal {
     pub value: serde_json::Value,
     pub raw: String,
@@ -90,8 +80,7 @@ impl Literal {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
-#[serde(tag = "type")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Identifier {
     pub name: String,
 }
