@@ -1,4 +1,4 @@
-use winnow::{combinator::repeat, error::StrContext::Label, prelude::*, token::any};
+use winnow::{combinator::repeat, prelude::*, token::any};
 
 use crate::token::{Token, TokenType};
 
@@ -11,7 +11,6 @@ pub fn string_literal(i: TokenSlice) -> PResult<Token> {
             TokenType::String => Some(token),
             _ => None,
         })
-        .context(Label("string literal (like \"myPart\""))
         .parse_next(i)?;
     Ok(token)
 }
@@ -25,7 +24,6 @@ fn whitespace(i: TokenSlice) -> PResult<Token> {
             None
         }
     })
-    .context(Label("some whitespace (e.g. spaces, tabs, new lines)"))
     .parse_next(i)
 }
 
@@ -34,7 +32,6 @@ fn equals(i: TokenSlice) -> PResult<Token> {
     any.verify(|token: &Token| {
         matches!(token.token_type, TokenType::Operator) && token.value == "="
     })
-    .context(Label("the equals operator, ="))
     .parse_next(i)
 }
 
@@ -48,19 +45,12 @@ pub fn declaration(i: TokenSlice) -> PResult<()> {
 
             Some(kind)
         })
-        .context(Label("declaring a name, e.g. 'let width = 3'"))
         .parse_next(i)?;
     require_whitespace(i)?;
-    identifier
-        .context(Label(
-            "an identifier, which becomes name you're binding the value to",
-        ))
-        .parse_next(i)?;
+    identifier.parse_next(i)?;
     equals(i)?;
 
-    string_literal
-        .context(Label("a KCL value, which is being bound to a variable"))
-        .parse_next(i)?;
+    string_literal.parse_next(i)?;
     Ok(())
 }
 
@@ -73,7 +63,6 @@ fn identifier(i: TokenSlice) -> PResult<Token> {
             None
         }
     })
-    .context(Label("an identifier, e.g. 'width' or 'myPart'"))
     .parse_next(i)
 }
 
