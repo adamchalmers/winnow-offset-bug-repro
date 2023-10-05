@@ -75,14 +75,12 @@ impl BodyItem {
 pub enum Value {
     Literal(Box<Literal>),
     Identifier(Box<Identifier>),
-    BinaryExpression(Box<BinaryExpression>),
     FunctionExpression(Box<FunctionExpression>),
     CallExpression(Box<CallExpression>),
     PipeExpression(Box<PipeExpression>),
     PipeSubstitution(Box<PipeSubstitution>),
     ArrayExpression(Box<ArrayExpression>),
     ObjectExpression(Box<ObjectExpression>),
-    MemberExpression(Box<MemberExpression>),
     UnaryExpression(Box<UnaryExpression>),
 }
 
@@ -91,14 +89,12 @@ impl Value {
         match self {
             Value::Literal(literal) => literal.start(),
             Value::Identifier(identifier) => identifier.start(),
-            Value::BinaryExpression(binary_expression) => binary_expression.start(),
             Value::FunctionExpression(function_expression) => function_expression.start(),
             Value::CallExpression(call_expression) => call_expression.start(),
             Value::PipeExpression(pipe_expression) => pipe_expression.start(),
             Value::PipeSubstitution(pipe_substitution) => pipe_substitution.start(),
             Value::ArrayExpression(array_expression) => array_expression.start(),
             Value::ObjectExpression(object_expression) => object_expression.start(),
-            Value::MemberExpression(member_expression) => member_expression.start(),
             Value::UnaryExpression(unary_expression) => unary_expression.start(),
         }
     }
@@ -107,14 +103,12 @@ impl Value {
         match self {
             Value::Literal(literal) => literal.end(),
             Value::Identifier(identifier) => identifier.end(),
-            Value::BinaryExpression(binary_expression) => binary_expression.end(),
             Value::FunctionExpression(function_expression) => function_expression.end(),
             Value::CallExpression(call_expression) => call_expression.end(),
             Value::PipeExpression(pipe_expression) => pipe_expression.end(),
             Value::PipeSubstitution(pipe_substitution) => pipe_substitution.end(),
             Value::ArrayExpression(array_expression) => array_expression.end(),
             Value::ObjectExpression(object_expression) => object_expression.end(),
-            Value::MemberExpression(member_expression) => member_expression.end(),
             Value::UnaryExpression(unary_expression) => unary_expression.end(),
         }
     }
@@ -125,10 +119,8 @@ impl Value {
 pub enum BinaryPart {
     Literal(Box<Literal>),
     Identifier(Box<Identifier>),
-    BinaryExpression(Box<BinaryExpression>),
     CallExpression(Box<CallExpression>),
     UnaryExpression(Box<UnaryExpression>),
-    MemberExpression(Box<MemberExpression>),
 }
 
 impl BinaryPart {
@@ -136,10 +128,8 @@ impl BinaryPart {
         match self {
             BinaryPart::Literal(literal) => literal.start(),
             BinaryPart::Identifier(identifier) => identifier.start(),
-            BinaryPart::BinaryExpression(binary_expression) => binary_expression.start(),
             BinaryPart::CallExpression(call_expression) => call_expression.start(),
             BinaryPart::UnaryExpression(unary_expression) => unary_expression.start(),
-            BinaryPart::MemberExpression(member_expression) => member_expression.start(),
         }
     }
 
@@ -147,10 +137,8 @@ impl BinaryPart {
         match self {
             BinaryPart::Literal(literal) => literal.end(),
             BinaryPart::Identifier(identifier) => identifier.end(),
-            BinaryPart::BinaryExpression(binary_expression) => binary_expression.end(),
             BinaryPart::CallExpression(call_expression) => call_expression.end(),
             BinaryPart::UnaryExpression(unary_expression) => unary_expression.end(),
-            BinaryPart::MemberExpression(member_expression) => member_expression.end(),
         }
     }
 }
@@ -459,95 +447,6 @@ pub struct ObjectProperty {
 }
 
 impl_value_meta!(ObjectProperty);
-
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
-#[serde(tag = "type")]
-pub enum MemberObject {
-    MemberExpression(Box<MemberExpression>),
-    Identifier(Box<Identifier>),
-}
-
-impl MemberObject {
-    pub fn start(&self) -> usize {
-        match self {
-            MemberObject::MemberExpression(member_expression) => member_expression.start,
-            MemberObject::Identifier(identifier) => identifier.start,
-        }
-    }
-
-    pub fn end(&self) -> usize {
-        match self {
-            MemberObject::MemberExpression(member_expression) => member_expression.end,
-            MemberObject::Identifier(identifier) => identifier.end,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
-#[serde(tag = "type")]
-pub enum LiteralIdentifier {
-    Identifier(Box<Identifier>),
-    Literal(Box<Literal>),
-}
-
-impl LiteralIdentifier {
-    pub fn start(&self) -> usize {
-        match self {
-            LiteralIdentifier::Identifier(identifier) => identifier.start,
-            LiteralIdentifier::Literal(literal) => literal.start,
-        }
-    }
-
-    pub fn end(&self) -> usize {
-        match self {
-            LiteralIdentifier::Identifier(identifier) => identifier.end,
-            LiteralIdentifier::Literal(literal) => literal.end,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
-#[serde(tag = "type")]
-pub struct MemberExpression {
-    pub start: usize,
-    pub end: usize,
-    pub object: MemberObject,
-    pub property: LiteralIdentifier,
-    pub computed: bool,
-}
-
-impl_value_meta!(MemberExpression);
-
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
-pub struct ObjectKeyInfo {
-    pub key: LiteralIdentifier,
-    pub index: usize,
-    pub computed: bool,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
-#[serde(tag = "type")]
-pub struct BinaryExpression {
-    pub start: usize,
-    pub end: usize,
-    pub operator: BinaryOperator,
-    pub left: BinaryPart,
-    pub right: BinaryPart,
-}
-
-impl_value_meta!(BinaryExpression);
-
-impl BinaryExpression {
-    pub fn new(operator: BinaryOperator, left: BinaryPart, right: BinaryPart) -> Self {
-        Self {
-            start: left.start(),
-            end: right.end(),
-            operator,
-            left,
-            right,
-        }
-    }
-}
 
 pub fn parse_json_number_as_f64(
     j: &serde_json::Value,

@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::token::{Token, TokenType};
+
 pub mod ast;
 pub mod errors;
 // pub mod executor;
@@ -7,8 +9,50 @@ pub mod parser;
 pub mod token;
 
 fn main() {
-    let some_program_string = r#"const let = "thing""#;
-    let tokens = crate::token::lexer(some_program_string);
+    let tokens = [
+        Token {
+            token_type: TokenType::Keyword,
+            start: 0,
+            end: 5,
+            value: "const".to_owned(),
+        },
+        Token {
+            token_type: TokenType::Whitespace,
+            start: 5,
+            end: 6,
+            value: " ".to_owned(),
+        },
+        Token {
+            token_type: TokenType::Keyword,
+            start: 6,
+            end: 9,
+            value: "let".to_owned(),
+        },
+        Token {
+            token_type: TokenType::Whitespace,
+            start: 9,
+            end: 10,
+            value: " ".to_owned(),
+        },
+        Token {
+            token_type: TokenType::Operator,
+            start: 10,
+            end: 11,
+            value: "=".to_owned(),
+        },
+        Token {
+            token_type: TokenType::Whitespace,
+            start: 11,
+            end: 12,
+            value: " ".to_owned(),
+        },
+        Token {
+            token_type: TokenType::String,
+            start: 12,
+            end: 19,
+            value: "\"thing\"".to_owned(),
+        },
+    ];
     let result = parser::parser_impl::run_parser(&mut tokens.as_slice());
     assert!(result.is_err());
     assert_eq!(

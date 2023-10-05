@@ -4,8 +4,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::{ast::types::VariableKind, SourceRange};
 
-mod tokeniser;
-
 /// The types of tokens.
 #[derive(
     Debug, PartialEq, Eq, Copy, Clone, Deserialize, Serialize, JsonSchema, FromStr, Display,
@@ -105,8 +103,4 @@ impl From<&Token> for SourceRange {
     fn from(token: &Token) -> Self {
         Self([token.start, token.end])
     }
-}
-
-pub fn lexer(s: &str) -> Vec<Token> {
-    tokeniser::lexer(s).unwrap_or_default()
 }

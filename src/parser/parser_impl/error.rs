@@ -17,8 +17,11 @@ pub struct ContextError<C = StrContext> {
 
 impl From<ParseError<&[Token], ContextError>> for KclError {
     fn from(err: ParseError<&[Token], ContextError>) -> Self {
-        dbg!(&err);
         let token_index = err.offset();
+        eprintln!(
+            "Input length is {}, error occurred at offset {token_index}",
+            err.input().len()
+        );
         let bad_token = &err.input()[token_index];
         let err = err.into_inner();
         // TODO: use _all_ the context entries, instead of just the first one.

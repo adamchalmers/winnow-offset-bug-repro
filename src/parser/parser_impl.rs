@@ -9,11 +9,11 @@ use winnow::{
 
 use crate::{
     ast::types::{
-        ArrayExpression, BinaryOperator, BinaryPart, BodyItem, CallExpression, ExpressionStatement,
-        FunctionExpression, Identifier, Literal, LiteralIdentifier, MemberExpression, MemberObject,
-        NonCodeMeta, NonCodeNode, NonCodeValue, ObjectExpression, ObjectProperty, PipeExpression,
-        PipeSubstitution, Program, ReturnStatement, UnaryExpression, UnaryOperator, Value,
-        VariableDeclaration, VariableDeclarator,
+        ArrayExpression, BinaryPart, BodyItem, CallExpression, ExpressionStatement,
+        FunctionExpression, Identifier, Literal, NonCodeMeta, NonCodeNode, NonCodeValue,
+        ObjectExpression, ObjectProperty, PipeExpression, PipeSubstitution, Program,
+        ReturnStatement, UnaryExpression, UnaryOperator, Value, VariableDeclaration,
+        VariableDeclarator,
     },
     errors::{KclError, KclErrorDetails},
     token::{Token, TokenType},
@@ -278,37 +278,6 @@ fn unsigned_number_literal(i: TokenSlice) -> PResult<Literal> {
     })
 }
 
-/// Parse a KCL operator that takes a left- and right-hand side argument.
-fn binary_operator(i: TokenSlice) -> PResult<BinaryOperator> {
-    any.try_map(|token: Token| {
-        if !matches!(token.token_type, TokenType::Operator) {
-            return Err(KclError::Syntax(KclErrorDetails {
-                source_ranges: token.as_source_ranges(),
-                message: format!(
-                    "unexpected token, should be an operator but was {}",
-                    token.token_type
-                ),
-            }));
-        }
-        let op = match token.value.as_str() {
-            "+" => BinaryOperator::Add,
-            "-" => BinaryOperator::Sub,
-            "/" => BinaryOperator::Div,
-            "*" => BinaryOperator::Mul,
-            "%" => BinaryOperator::Mod,
-            _ => {
-                return Err(KclError::Syntax(KclErrorDetails {
-                    source_ranges: token.as_source_ranges(),
-                    message: format!("{} is not a binary operator", token.value.as_str()),
-                }))
-            }
-        };
-        Ok(op)
-    })
-    .context(Label("a binary operator (like + or *)"))
-    .parse_next(i)
-}
-
 /// Parse a KCL operand that can be used with an operator.
 fn operand(i: TokenSlice) -> PResult<BinaryPart> {
     const TODO_783: &str = "found a value, but this kind of value cannot be used as the operand to an operator yet (see https://github.com/KittyCAD/modeling-app/issues/783)";
@@ -331,9 +300,7 @@ fn operand(i: TokenSlice) -> PResult<BinaryPart> {
                 Value::UnaryExpression(x) => BinaryPart::UnaryExpression(x),
                 Value::Literal(x) => BinaryPart::Literal(x),
                 Value::Identifier(x) => BinaryPart::Identifier(x),
-                Value::BinaryExpression(x) => BinaryPart::BinaryExpression(x),
                 Value::CallExpression(x) => BinaryPart::CallExpression(x),
-                Value::MemberExpression(x) => BinaryPart::MemberExpression(x),
             };
             Ok(val)
         })
@@ -519,76 +486,6 @@ fn function_expression(i: TokenSlice) -> PResult<FunctionExpression> {
     })
 }
 
-/// E.g. `person.name`
-fn member_expression_dot(i: TokenSlice) -> PResult<(LiteralIdentifier, usize, bool)> {
-    period.parse_next(i)?;
-    let property = identifier.parse_next(i)?;
-    let end = property.end;
-    Ok((
-        LiteralIdentifier::Identifier(Box::new(property)),
-        end,
-        false,
-    ))
-}
-
-/// E.g. `people[0]` or `people[i]` or `people['adam']`
-fn member_expression_subscript(i: TokenSlice) -> PResult<(LiteralIdentifier, usize, bool)> {
-    let _ = open_bracket.parse_next(i)?;
-    let property = alt((
-        literal.map(Box::new).map(LiteralIdentifier::Literal),
-        identifier.map(Box::new).map(LiteralIdentifier::Identifier),
-    ))
-    .parse_next(i)?;
-    let end = close_bracket.parse_next(i)?.end;
-    let computed = matches!(property, LiteralIdentifier::Identifier(_));
-    Ok((property, end, computed))
-}
-
-/// Get a property of an object, or an index of an array, or a member of a collection.
-/// Can be arbitrarily nested, e.g. `people[i]['adam'].age`.
-fn member_expression(i: TokenSlice) -> PResult<MemberExpression> {
-    // This is an identifier, followed by a sequence of members (aka properties)
-    // First, the identifier.
-    let id = identifier
-        .context(Label("the identifier of the object whose property you're trying to access, e.g. in 'shape.size.width', 'shape' is the identifier"))
-        .parse_next(i)?;
-    // Now a sequence of members.
-    let member = alt((member_expression_dot, member_expression_subscript))
-        .context(Label("a member/property, e.g. size.x and size['height'] and size[0] are all different ways to access a member/property of 'size'"));
-    let mut members: Vec<_> = repeat(1.., member)
-        .context(Label("a sequence of at least one members/properties"))
-        .parse_next(i)?;
-
-    // Process the first member.
-    // It's safe to call remove(0), because the vec is created from repeat(1..),
-    // which is guaranteed to have >=1 elements.
-    let (property, end, computed) = members.remove(0);
-    let start = id.start;
-    let initial_member_expression = MemberExpression {
-        start,
-        end,
-        object: MemberObject::Identifier(Box::new(id)),
-        computed,
-        property,
-    };
-
-    // Each remaining member wraps the current member expression inside another member expression.
-    Ok(members
-        .into_iter()
-        // Take the accumulated member expression from the previous iteration,
-        // and use it as the `object` of a new, bigger member expression.
-        .fold(
-            initial_member_expression,
-            |accumulated, (property, end, computed)| MemberExpression {
-                start,
-                end,
-                object: MemberObject::MemberExpression(Box::new(accumulated)),
-                computed,
-                property,
-            },
-        ))
-}
-
 /// Parse the body of a user-defined function.
 pub fn function_body(i: TokenSlice) -> PResult<Program> {
     let leading_whitespace = opt(whitespace).parse_next(i)?;
@@ -663,7 +560,6 @@ fn value(i: TokenSlice) -> PResult<Value> {
 fn value_but_not_pipe(i: TokenSlice) -> PResult<Value> {
     alt((
         unary_expression.map(Box::new).map(Value::UnaryExpression),
-        member_expression.map(Box::new).map(Value::MemberExpression),
         bool_value.map(Box::new).map(Value::Identifier),
         literal.map(Box::new).map(Value::Literal),
         fn_call.map(Box::new).map(Value::CallExpression),
@@ -683,7 +579,6 @@ fn possible_operands(i: TokenSlice) -> PResult<Value> {
     alt((
         unary_expression.map(Box::new).map(Value::UnaryExpression),
         bool_value.map(Box::new).map(Value::Identifier),
-        member_expression.map(Box::new).map(Value::MemberExpression),
         literal.map(Box::new).map(Value::Literal),
         fn_call.map(Box::new).map(Value::CallExpression),
         identifier.map(Box::new).map(Value::Identifier),
@@ -804,24 +699,6 @@ fn unary_expression(i: TokenSlice) -> PResult<UnaryExpression> {
     })
 }
 
-fn binary_expression_tokens(
-    i: TokenSlice,
-) -> PResult<(BinaryPart, Vec<(BinaryOperator, BinaryPart)>)> {
-    let x = operand.parse_next(i)?;
-    let v: Vec<_> = repeat(
-        1..,
-        (
-            preceded(opt(whitespace), binary_operator),
-            preceded(opt(whitespace), operand),
-        ),
-    )
-    .context(Label(
-        "one or more binary operators (like + or -) and operands for them, e.g. 1 + 2 - 3",
-    ))
-    .parse_next(i)?;
-    Ok((x, v))
-}
-
 /// Parse a KCL expression.
 fn expression(i: TokenSlice) -> PResult<ExpressionStatement> {
     let val = value
@@ -927,11 +804,6 @@ fn comma(i: TokenSlice) -> PResult<()> {
     Ok(())
 }
 
-fn period(i: TokenSlice) -> PResult<()> {
-    TokenType::Period.parse_from(i)?;
-    Ok(())
-}
-
 fn double_period(i: TokenSlice) -> PResult<Token> {
     any.try_map(|token: Token| {
         if matches!(token.token_type, TokenType::DoublePeriod) {
@@ -990,296 +862,4 @@ fn fn_call(i: TokenSlice) -> PResult<CallExpression> {
         arguments: args,
         optional: false,
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use pretty_assertions::assert_eq;
-
-    use super::*;
-    use crate::ast::types::{BodyItem, Value, VariableKind};
-
-    #[test]
-    fn parse_args() {
-        for (i, (test, expected_len)) in [("someVar", 1), ("5, 3", 2), (r#""a""#, 1)]
-            .into_iter()
-            .enumerate()
-        {
-            let tokens = crate::token::lexer(test);
-            let actual = match arguments.parse(&tokens) {
-                Ok(x) => x,
-                Err(e) => panic!(
-                    "Failed test {i}, could not parse function arguments from \"{test}\": {e:?}"
-                ),
-            };
-            assert_eq!(actual.len(), expected_len, "failed test {i}");
-        }
-    }
-
-    #[test]
-    fn test_negative_operands() {
-        let tokens = crate::token::lexer("-leg2");
-        let _s = operand.parse_next(&mut tokens.as_slice()).unwrap();
-    }
-
-    #[test]
-    fn check_parsers_work_the_same() {
-        for (i, test_program) in [
-            r#"const x = -leg2 + thickness"#,
-            r#"const obj = { a: 1, b: 2 }
-            const height = 1 - obj.a"#,
-            r#"const obj = { a: 1, b: 2 }
-            const height = 1 - obj["a"]"#,
-            r#"const obj = { a: 1, b: 2 }
-            const height = obj["a"] - 1"#,
-            r#"const obj = { a: 1, b: 2 }
-            const height = [1 - obj["a"], 0]"#,
-            r#"const obj = { a: 1, b: 2 }
-            const height = [obj["a"] - 1, 0]"#,
-            r#"const obj = { a: 1, b: 2 }
-            const height = [obj["a"] -1, 0]"#,
-            "const height = 1 - obj.a",
-            "const six = 1 + 2 + 3",
-            "const five = 3 * 1 + 2",
-            r#"const height = [ obj["a"], 0 ]"#,
-            r#"const obj = { a: 1, b: 2 }
-            const height = obj["a"]"#,
-            r#"const prop = yo["one"][two]"#,
-            r#"const pt1 = b1[x]"#,
-            "const prop = yo.one.two.three.four",
-            r#"const pt1 = b1[0]"#,
-            r#"const pt1 = b1['zero']"#,
-            r#"const pt1 = b1.zero"#,
-            "const sg = startSketchAt(pos)",
-            "const sg = startSketchAt(pos) |> line([0, -scale], %)",
-            r#"const sg = -scale"#,
-            "lineTo({ to: [0, -1] })",
-            "const myArray = [0..10]",
-            r#"
-            fn firstPrimeNumber = () => {
-                return 2
-            }
-            firstPrimeNumber()"#,
-            r#"fn thing = (param) => {
-                return true
-            }
-            thing(false)"#,
-            r#"const mySketch = startSketchAt([0,0])
-                |> lineTo({ to: [0, 1], tag: 'myPath' }, %)
-                |> lineTo([1, 1], %)
-                |> lineTo({ to: [1,0], tag: "rightPath" }, %)
-                |> close(%)"#,
-            "const mySketch = startSketchAt([0,0]) |> lineTo([1, 1], %) |> close(%)",
-            "const myBox = startSketchAt(p)",
-            r#"const myBox = f(1) |> g(2)"#,
-            r#"const myBox = startSketchAt(p) |> line([0, l], %)"#,
-            "lineTo({ to: [0, 1] })",
-            "lineTo({ to: [0, 1], from: [3, 3] })",
-            "lineTo({to:[0, 1]})",
-            "lineTo({ to: [0, 1], from: [3, 3]})",
-            "lineTo({ to: [0, 1],from: [3, 3] })",
-            "const mySketch = startSketchAt([0,0])",
-            "log(5, \"hello\", aIdentifier)",
-            r#"5 + "a""#,
-            "line([0, l], %)",
-        ]
-        .into_iter()
-        .enumerate()
-        {
-            // Run the original parser
-            let tokens = crate::token::lexer(test_program);
-
-            // Run the second parser, check it matches the first parser.
-            let actual = match program.parse(&tokens) {
-                Ok(x) => x,
-                Err(_e) => panic!("could not parse test {i}"),
-            };
-        }
-    }
-
-    #[test]
-    fn some_pipe_expr() {
-        let test_program = r#"x()
-        |> y() /* this is
-        a comment
-        spanning a few lines */
-        |> z()"#;
-        let tokens = crate::token::lexer(test_program);
-        let actual = pipe_expression.parse(&tokens).unwrap();
-        let n = actual.non_code_meta.non_code_nodes.len();
-        assert_eq!(
-            n, 1,
-            "expected one comment in pipe expression but found {n}"
-        );
-        let nc = actual.non_code_meta.non_code_nodes.get(&1).unwrap();
-        assert!(nc.value().starts_with("this"));
-        assert!(nc.value().ends_with("lines"));
-    }
-
-    #[test]
-    fn comments_in_pipe_expr() {
-        for (i, test_program) in [
-            r#"y() |> /*hi*/ z(%)"#,
-            "1 |>/*hi*/  f",
-            r#"y() |> /*hi*/ z(%)"#,
-            "1 /*hi*/ |> f",
-            "1
-        // Hi
-        |> f",
-            "1
-        /* Hi 
-        there
-        */
-        |> f",
-        ]
-        .into_iter()
-        .enumerate()
-        {
-            let tokens = crate::token::lexer(test_program);
-            let actual = pipe_expression.parse(&tokens);
-            assert!(actual.is_ok(), "could not parse test {i}, '{test_program}'");
-            let actual = actual.unwrap();
-            let n = actual.non_code_meta.non_code_nodes.len();
-            assert_eq!(
-                n, 1,
-                "expected one comment in pipe expression but found {n}",
-            )
-        }
-    }
-
-    #[test]
-    fn comments() {
-        for (i, (test_program, expected)) in [
-            (
-                "//hi",
-                NonCodeNode {
-                    start: 0,
-                    end: 4,
-                    value: NonCodeValue::InlineComment {
-                        value: "hi".to_owned(),
-                    },
-                },
-            ),
-            (
-                "/*hello*/",
-                NonCodeNode {
-                    start: 0,
-                    end: 9,
-                    value: NonCodeValue::BlockComment {
-                        value: "hello".to_owned(),
-                    },
-                },
-            ),
-            (
-                "/* hello */",
-                NonCodeNode {
-                    start: 0,
-                    end: 11,
-                    value: NonCodeValue::BlockComment {
-                        value: "hello".to_owned(),
-                    },
-                },
-            ),
-            (
-                "/* \nhello */",
-                NonCodeNode {
-                    start: 0,
-                    end: 12,
-                    value: NonCodeValue::BlockComment {
-                        value: "hello".to_owned(),
-                    },
-                },
-            ),
-            (
-                "
-                /* hello */",
-                NonCodeNode {
-                    start: 0,
-                    end: 28,
-                    value: NonCodeValue::NewLineBlockComment {
-                        value: "hello".to_owned(),
-                    },
-                },
-            ),
-        ]
-        .into_iter()
-        .enumerate()
-        {
-            let tokens = crate::token::lexer(test_program);
-            let actual = non_code_node.parse(&tokens);
-            assert!(actual.is_ok(), "could not parse test {i}: {actual:#?}");
-            let actual = actual.unwrap();
-            assert_eq!(actual, expected, "failed test {i}");
-        }
-    }
-
-    #[test]
-    fn pipes_on_pipes_minimal() {
-        let test_program = r#"startSketchAt([0, 0])
-        |> lineTo([0, -0], %) // MoveRelative
-
-        show(svg)
-        "#;
-        let tokens = crate::token::lexer(test_program);
-        let mut slice = &tokens[..];
-        let _actual = pipe_expression.parse_next(&mut slice).unwrap();
-        assert_eq!(slice[0].token_type, TokenType::Whitespace);
-    }
-
-    #[test]
-    fn test_parameter_list() {
-        let tests = [
-            ("", vec![]),
-            ("a", vec!["a"]),
-            ("a, b", vec!["a", "b"]),
-            ("a,b", vec!["a", "b"]),
-        ];
-        for (i, (input, expected)) in tests.into_iter().enumerate() {
-            let tokens = crate::token::lexer(input);
-            let actual = parameters.parse(&tokens);
-            assert!(actual.is_ok(), "could not parse test {i}");
-            let actual_ids: Vec<_> = actual.unwrap().into_iter().map(|id| id.name).collect();
-            assert_eq!(actual_ids, expected);
-        }
-    }
-
-    #[test]
-    fn test_user_function() {
-        let input = "() => {
-            return 2
-        }";
-
-        let tokens = crate::token::lexer(input);
-        let actual = function_expression.parse(&tokens);
-        assert!(actual.is_ok(), "could not parse test function");
-    }
-
-    #[test]
-    fn test_declaration() {
-        let tests = [
-            "const myVar = 5",
-            "const myVar=5",
-            "const myVar =5",
-            "const myVar= 5",
-        ];
-        for test in tests {
-            // Run the original parser
-            let tokens = crate::token::lexer(test);
-
-            // Run the second parser, check it matches the first parser.
-            let mut actual = declaration.parse(&tokens).unwrap();
-
-            // Inspect its output in more detail.
-            assert_eq!(actual.kind, VariableKind::Const);
-            assert_eq!(actual.start, 0);
-            assert_eq!(actual.declarations.len(), 1);
-            let decl = actual.declarations.pop().unwrap();
-            assert_eq!(decl.id.name, "myVar");
-            let Value::Literal(value) = decl.init else {
-                panic!("value should be a literal")
-            };
-            assert_eq!(value.end, test.len());
-            assert_eq!(value.raw, "5");
-        }
-    }
 }
