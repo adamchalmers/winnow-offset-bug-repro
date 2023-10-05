@@ -77,10 +77,6 @@ pub enum Value {
     Identifier(Box<Identifier>),
     FunctionExpression(Box<FunctionExpression>),
     CallExpression(Box<CallExpression>),
-    PipeExpression(Box<PipeExpression>),
-    PipeSubstitution(Box<PipeSubstitution>),
-    ArrayExpression(Box<ArrayExpression>),
-    ObjectExpression(Box<ObjectExpression>),
     UnaryExpression(Box<UnaryExpression>),
 }
 
@@ -91,10 +87,6 @@ impl Value {
             Value::Identifier(identifier) => identifier.start(),
             Value::FunctionExpression(function_expression) => function_expression.start(),
             Value::CallExpression(call_expression) => call_expression.start(),
-            Value::PipeExpression(pipe_expression) => pipe_expression.start(),
-            Value::PipeSubstitution(pipe_substitution) => pipe_substitution.start(),
-            Value::ArrayExpression(array_expression) => array_expression.start(),
-            Value::ObjectExpression(object_expression) => object_expression.start(),
             Value::UnaryExpression(unary_expression) => unary_expression.start(),
         }
     }
@@ -105,10 +97,6 @@ impl Value {
             Value::Identifier(identifier) => identifier.end(),
             Value::FunctionExpression(function_expression) => function_expression.end(),
             Value::CallExpression(call_expression) => call_expression.end(),
-            Value::PipeExpression(pipe_expression) => pipe_expression.end(),
-            Value::PipeSubstitution(pipe_substitution) => pipe_substitution.end(),
-            Value::ArrayExpression(array_expression) => array_expression.end(),
-            Value::ObjectExpression(object_expression) => object_expression.end(),
             Value::UnaryExpression(unary_expression) => unary_expression.end(),
         }
     }
@@ -374,80 +362,6 @@ impl Identifier {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
-#[serde(tag = "type")]
-pub struct PipeSubstitution {
-    pub start: usize,
-    pub end: usize,
-}
-
-impl_value_meta!(PipeSubstitution);
-
-impl PipeSubstitution {
-    pub fn new() -> Self {
-        Self { start: 0, end: 0 }
-    }
-}
-
-impl Default for PipeSubstitution {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl From<PipeSubstitution> for Value {
-    fn from(pipe_substitution: PipeSubstitution) -> Self {
-        Value::PipeSubstitution(Box::new(pipe_substitution))
-    }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
-#[serde(tag = "type")]
-pub struct ArrayExpression {
-    pub start: usize,
-    pub end: usize,
-    pub elements: Vec<Value>,
-}
-
-impl_value_meta!(ArrayExpression);
-
-impl From<ArrayExpression> for Value {
-    fn from(array_expression: ArrayExpression) -> Self {
-        Value::ArrayExpression(Box::new(array_expression))
-    }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
-#[serde(tag = "type")]
-pub struct ObjectExpression {
-    pub start: usize,
-    pub end: usize,
-    pub properties: Vec<ObjectProperty>,
-}
-
-impl ObjectExpression {
-    pub fn new(properties: Vec<ObjectProperty>) -> Self {
-        Self {
-            start: 0,
-            end: 0,
-            properties,
-        }
-    }
-}
-
-impl_value_meta!(ObjectExpression);
-
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
-#[serde(tag = "type")]
-pub struct ObjectProperty {
-    pub start: usize,
-    pub end: usize,
-    pub key: Identifier,
-    pub value: Value,
-}
-
-impl_value_meta!(ObjectProperty);
-
 pub fn parse_json_number_as_f64(
     j: &serde_json::Value,
     source_range: SourceRange,
@@ -562,23 +476,6 @@ pub enum UnaryOperator {
     #[serde(rename = "!")]
     #[display("!")]
     Not,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
-#[serde(rename_all = "camelCase", tag = "type")]
-pub struct PipeExpression {
-    pub start: usize,
-    pub end: usize,
-    pub body: Vec<Value>,
-    pub non_code_meta: NonCodeMeta,
-}
-
-impl_value_meta!(PipeExpression);
-
-impl From<PipeExpression> for Value {
-    fn from(pipe_expression: PipeExpression) -> Self {
-        Value::PipeExpression(Box::new(pipe_expression))
-    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
