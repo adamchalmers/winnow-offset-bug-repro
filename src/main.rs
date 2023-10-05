@@ -1,6 +1,4 @@
-use winnow::Parser;
-
-use winnow::{combinator::repeat, prelude::*, token::any};
+use winnow::{prelude::*, token::any};
 
 fn main() {
     let tokens = [
@@ -33,7 +31,25 @@ fn main() {
     eprintln!("Bad token: {bad_token:?}");
 }
 
+/* The stream is a vec of custom tokens. */
 type TokenSlice<'slice, 'input> = &'slice mut &'input [Token];
+
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+pub enum TokenType {
+    Word,
+    Operator,
+    String,
+    Keyword,
+    Whitespace,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Token {
+    pub token_type: TokenType,
+    pub value: String,
+}
+
+/* Parsers */
 
 /// Parse a KCL string literal
 pub fn string_literal(i: TokenSlice) -> PResult<Token> {
@@ -62,7 +78,7 @@ pub fn declaration(i: TokenSlice) -> PResult<()> {
     let _kind = any
         .verify(|token: &Token| token.token_type == TokenType::Keyword)
         .parse_next(i)?;
-    require_whitespace(i)?;
+    whitespace.parse_next(i)?;
     identifier.parse_next(i)?;
     equals(i)?;
 
@@ -70,40 +86,8 @@ pub fn declaration(i: TokenSlice) -> PResult<()> {
     Ok(())
 }
 
-/// Parse a KCL identifier (name of a constant/variable/function)
+/// Parse an identifier (name of a constant/variable/function)
 fn identifier(i: TokenSlice) -> PResult<Token> {
     any.verify(|token: &Token| token.token_type == TokenType::Word)
         .parse_next(i)
-}
-
-/// Matches at least 1 whitespace.
-fn require_whitespace(i: TokenSlice) -> PResult<()> {
-    repeat(1.., whitespace).parse_next(i)
-}
-
-#[derive(Debug, PartialEq, Eq, Copy, Clone)]
-pub enum TokenType {
-    Word,
-    Operator,
-    String,
-    Keyword,
-    Whitespace,
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Token {
-    pub token_type: TokenType,
-    pub value: String,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum VariableKind {
-    /// Declare a variable.
-    Let,
-    /// Declare a variable that is read-only.
-    Const,
-    /// Declare a function.
-    Fn,
-    /// Declare a variable.
-    Var,
 }
