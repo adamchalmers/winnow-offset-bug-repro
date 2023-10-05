@@ -16,22 +16,7 @@ use crate::{
     token::{Token, TokenType},
 };
 
-mod error;
-
-type PResult<O, E = error::ContextError> = winnow::prelude::PResult<O, E>;
-
 type TokenSlice<'slice, 'input> = &'slice mut &'input [Token];
-
-pub fn run_parser(i: TokenSlice) -> Result<Program, KclError> {
-    if i.is_empty() {
-        return Err(KclError::Syntax(KclErrorDetails {
-            source_ranges: vec![],
-            message: "file is empty".to_string(),
-        }));
-    }
-
-    program.parse(i).map_err(KclError::from)
-}
 
 fn body_item(i: TokenSlice) -> PResult<BodyItem> {
     dispatch! {peek(any);
@@ -42,7 +27,7 @@ fn body_item(i: TokenSlice) -> PResult<BodyItem> {
     .parse_next(i)
 }
 
-fn program(i: TokenSlice) -> PResult<Program> {
+pub fn program(i: TokenSlice) -> PResult<Program> {
     let body: Vec<_> = separated1(body_item, whitespace)
         .context(Label(
             "at least one KCL body item, i.e. a declaration or expression",

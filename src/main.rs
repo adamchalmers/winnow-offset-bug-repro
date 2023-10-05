@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use winnow::Parser;
 
 use crate::token::{Token, TokenType};
 
@@ -41,8 +42,11 @@ fn main() {
             value: "\"thing\"".to_owned(),
         },
     ];
-    let result = parser::parser_impl::run_parser(&mut tokens.as_slice());
-    eprintln!("{result:?}")
+    let result = parser::parser_impl::program.parse(&mut tokens.as_slice());
+    eprintln!("{result:#?}");
+    let err = result.unwrap_err();
+    let bad_token = &err.input()[err.offset()];
+    eprintln!("Bad token: {bad_token:?}");
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy)]
