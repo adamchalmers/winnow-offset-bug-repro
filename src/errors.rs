@@ -8,22 +8,6 @@ use crate::SourceRange;
 pub enum KclError {
     #[error("syntax: {0:?}")]
     Syntax(KclErrorDetails),
-    #[error("semantic: {0:?}")]
-    Semantic(KclErrorDetails),
-    #[error("type: {0:?}")]
-    Type(KclErrorDetails),
-    #[error("unimplemented: {0:?}")]
-    Unimplemented(KclErrorDetails),
-    #[error("unexpected: {0:?}")]
-    Unexpected(KclErrorDetails),
-    #[error("value already defined: {0:?}")]
-    ValueAlreadyDefined(KclErrorDetails),
-    #[error("undefined value: {0:?}")]
-    UndefinedValue(KclErrorDetails),
-    #[error("invalid expression: {0:?}")]
-    InvalidExpression(KclErrorDetails),
-    #[error("engine: {0:?}")]
-    Engine(KclErrorDetails),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -39,28 +23,6 @@ impl KclError {
     pub fn get_message_line_column(&self, input: &str) -> (String, Option<usize>, Option<usize>) {
         let (type_, source_range, message) = match &self {
             KclError::Syntax(e) => ("syntax", e.source_ranges.clone(), e.message.clone()),
-            KclError::Semantic(e) => ("semantic", e.source_ranges.clone(), e.message.clone()),
-            KclError::Type(e) => ("type", e.source_ranges.clone(), e.message.clone()),
-            KclError::Unimplemented(e) => {
-                ("unimplemented", e.source_ranges.clone(), e.message.clone())
-            }
-            KclError::Unexpected(e) => ("unexpected", e.source_ranges.clone(), e.message.clone()),
-            KclError::ValueAlreadyDefined(e) => (
-                "value already defined",
-                e.source_ranges.clone(),
-                e.message.clone(),
-            ),
-            KclError::UndefinedValue(e) => (
-                "undefined value",
-                e.source_ranges.clone(),
-                e.message.clone(),
-            ),
-            KclError::InvalidExpression(e) => (
-                "invalid expression",
-                e.source_ranges.clone(),
-                e.message.clone(),
-            ),
-            KclError::Engine(e) => ("engine", e.source_ranges.clone(), e.message.clone()),
         };
 
         // Calculate the line and column of the error from the source range.
@@ -78,33 +40,5 @@ impl KclError {
         };
 
         (format!("{}: {}", type_, message), line, column)
-    }
-
-    pub fn source_ranges(&self) -> Vec<SourceRange> {
-        match &self {
-            KclError::Syntax(e) => e.source_ranges.clone(),
-            KclError::Semantic(e) => e.source_ranges.clone(),
-            KclError::Type(e) => e.source_ranges.clone(),
-            KclError::Unimplemented(e) => e.source_ranges.clone(),
-            KclError::Unexpected(e) => e.source_ranges.clone(),
-            KclError::ValueAlreadyDefined(e) => e.source_ranges.clone(),
-            KclError::UndefinedValue(e) => e.source_ranges.clone(),
-            KclError::InvalidExpression(e) => e.source_ranges.clone(),
-            KclError::Engine(e) => e.source_ranges.clone(),
-        }
-    }
-}
-
-/// This is different than to_string() in that it will serialize the Error
-/// the struct as JSON so we can deserialize it on the js side.
-impl From<KclError> for String {
-    fn from(error: KclError) -> Self {
-        serde_json::to_string(&error).unwrap()
-    }
-}
-
-impl From<String> for KclError {
-    fn from(error: String) -> Self {
-        serde_json::from_str(&error).unwrap()
     }
 }
