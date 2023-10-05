@@ -49,7 +49,6 @@ pub(crate) use impl_value_meta;
 pub enum BodyItem {
     ExpressionStatement(ExpressionStatement),
     VariableDeclaration(VariableDeclaration),
-    ReturnStatement(ReturnStatement),
 }
 
 impl BodyItem {
@@ -57,7 +56,6 @@ impl BodyItem {
         match self {
             BodyItem::ExpressionStatement(expression_statement) => expression_statement.start(),
             BodyItem::VariableDeclaration(variable_declaration) => variable_declaration.start(),
-            BodyItem::ReturnStatement(return_statement) => return_statement.start(),
         }
     }
 
@@ -65,7 +63,6 @@ impl BodyItem {
         match self {
             BodyItem::ExpressionStatement(expression_statement) => expression_statement.end(),
             BodyItem::VariableDeclaration(variable_declaration) => variable_declaration.end(),
-            BodyItem::ReturnStatement(return_statement) => return_statement.end(),
         }
     }
 }
@@ -423,13 +420,3 @@ pub enum UnaryOperator {
     #[display("!")]
     Not,
 }
-
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
-#[serde(tag = "type")]
-pub struct ReturnStatement {
-    pub start: usize,
-    pub end: usize,
-    pub argument: Value,
-}
-
-impl_value_meta!(ReturnStatement);

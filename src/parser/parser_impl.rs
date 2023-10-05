@@ -9,8 +9,8 @@ use winnow::{
 
 use crate::{
     ast::types::{
-        BodyItem, ExpressionStatement, Identifier, Literal, Program, ReturnStatement, Value,
-        VariableDeclaration, VariableDeclarator,
+        BodyItem, ExpressionStatement, Identifier, Literal, Program, Value, VariableDeclaration,
+        VariableDeclarator,
     },
     errors::{KclError, KclErrorDetails},
     token::{Token, TokenType},
@@ -56,7 +56,6 @@ fn program(i: TokenSlice) -> PResult<Program> {
         .unwrap_or_else(|| match body.last().unwrap() {
             BodyItem::VariableDeclaration(v) => v.end,
             BodyItem::ExpressionStatement(e) => e.end,
-            BodyItem::ReturnStatement(r) => r.end,
         });
     Ok(Program {
         start: 0,
@@ -121,40 +120,8 @@ fn equals(i: TokenSlice) -> PResult<Token> {
     .parse_next(i)
 }
 
-/// Parse a return statement of a user-defined function, e.g. `return x`.
-pub fn return_stmt(i: TokenSlice) -> PResult<ReturnStatement> {
-    let start = any
-        .try_map(|token: Token| {
-            if matches!(token.token_type, TokenType::Keyword) && token.value == "return" {
-                Ok(token.start)
-            } else {
-                Err(KclError::Syntax(KclErrorDetails {
-                    source_ranges: token.as_source_ranges(),
-                    message: format!("{} is not a return keyword", token.value.as_str()),
-                }))
-            }
-        })
-        .context(Label(
-            "the 'return' keyword, which ends your function (and becomes this function's value when it's called)",
-        ))
-        .parse_next(i)?;
-    require_whitespace(i)?;
-    let argument = value(i)?;
-    Ok(ReturnStatement {
-        start,
-        end: argument.end(),
-        argument,
-    })
-}
-
 /// Parse a KCL value
 fn value(i: TokenSlice) -> PResult<Value> {
-    alt((value_but_not_pipe,))
-        .context(Label("a KCL value"))
-        .parse_next(i)
-}
-
-fn value_but_not_pipe(i: TokenSlice) -> PResult<Value> {
     alt((
         string_literal.map(Box::new).map(Value::Literal),
         identifier.map(Box::new).map(Value::Identifier),
