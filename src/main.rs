@@ -3,10 +3,6 @@ use winnow::{prelude::*, token::any};
 fn main() {
     let tokens = [
         Token {
-            token_type: TokenType::Keyword,
-            value: "const".to_owned(),
-        },
-        Token {
             token_type: TokenType::Whitespace,
             value: " ".to_owned(),
         },
@@ -51,9 +47,6 @@ fn whitespace(i: TokenSlice) -> PResult<Token> {
 
 /// Parse a variable/constant declaration.
 pub fn declaration(i: TokenSlice) -> PResult<()> {
-    let _kind = any
-        .verify(|token: &Token| token.token_type == TokenType::Keyword)
-        .parse_next(i)?;
     whitespace.parse_next(i)?;
     identifier.parse_next(i)?;
     Ok(())
