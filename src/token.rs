@@ -1,5 +1,3 @@
-use crate::ast::types::VariableKind;
-
 /// The types of tokens.
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum TokenType {
