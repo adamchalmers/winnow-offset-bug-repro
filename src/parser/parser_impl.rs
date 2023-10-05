@@ -45,7 +45,6 @@ pub fn program(i: TokenSlice) -> PResult<Program> {
         start: 0,
         end,
         body,
-        non_code_meta: Default::default(), // TODO: support comments.
     })
 }
 

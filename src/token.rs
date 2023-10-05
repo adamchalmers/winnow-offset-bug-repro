@@ -35,15 +35,6 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn from_range(range: std::ops::Range<usize>, token_type: TokenType, value: String) -> Self {
-        Self {
-            start: range.start,
-            end: range.end,
-            value,
-            token_type,
-        }
-    }
-
     pub fn as_source_range(&self) -> SourceRange {
         SourceRange([self.start, self.end])
     }
@@ -66,17 +57,5 @@ impl Token {
             "const" => VariableKind::Const,
             _ => return None,
         })
-    }
-}
-
-impl From<Token> for SourceRange {
-    fn from(token: Token) -> Self {
-        Self([token.start, token.end])
-    }
-}
-
-impl From<&Token> for SourceRange {
-    fn from(token: &Token) -> Self {
-        Self([token.start, token.end])
     }
 }
