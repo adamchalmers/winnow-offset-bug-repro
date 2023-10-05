@@ -1,4 +1,3 @@
-use serde::{Deserialize, Serialize};
 use winnow::Parser;
 
 use crate::token::{Token, TokenType};
@@ -45,9 +44,7 @@ fn main() {
     let result = parser::parser_impl::program.parse(&mut tokens.as_slice());
     eprintln!("{result:#?}");
     let err = result.unwrap_err();
-    let bad_token = &err.input()[err.offset()];
+    let stream = err.input();
+    let bad_token = &stream[err.offset()];
     eprintln!("Bad token: {bad_token:?}");
 }
-
-#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
-pub struct SourceRange([usize; 2]);

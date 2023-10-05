@@ -33,19 +33,8 @@ pub fn program(i: TokenSlice) -> PResult<Program> {
             "at least one KCL body item, i.e. a declaration or expression",
         ))
         .parse_next(i)?;
-    let trailing_ws = opt(whitespace).parse_next(i)?.unwrap_or_default();
-    let end = trailing_ws
-        .last()
-        .map(|tok| tok.end)
-        .unwrap_or_else(|| match body.last().unwrap() {
-            BodyItem::VariableDeclaration(v) => v.end,
-            BodyItem::ExpressionStatement(e) => e.end,
-        });
-    Ok(Program {
-        start: 0,
-        end,
-        body,
-    })
+    let _ = opt(whitespace).parse_next(i)?.unwrap_or_default();
+    Ok(Program { body })
 }
 
 /// Parse a KCL string literal
@@ -57,15 +46,12 @@ pub fn string_literal(i: TokenSlice) -> PResult<Literal> {
                 Ok((JValue::String(s), token))
             }
             _ => Err(KclError::Syntax(KclErrorDetails {
-                source_ranges: token.as_source_ranges(),
                 message: "invalid string literal".to_owned(),
             })),
         })
         .context(Label("string literal (like \"myPart\""))
         .parse_next(i)?;
     Ok(Literal {
-        start: token.start,
-        end: token.end,
         value,
         raw: token.value.clone(),
     })
@@ -80,7 +66,6 @@ fn whitespace(i: TokenSlice) -> PResult<Vec<Token>> {
                 Ok(token)
             } else {
                 Err(KclError::Syntax(KclErrorDetails {
-                    source_ranges: token.as_source_ranges(),
                     message: format!(
                         "expected whitespace, found '{}' which is {}",
                         token.value.as_str(),
@@ -116,16 +101,15 @@ fn value(i: TokenSlice) -> PResult<Value> {
 /// Parse a variable/constant declaration.
 fn declaration(i: TokenSlice) -> PResult<VariableDeclaration> {
     const EXPECTED: &str = "expected a variable declaration keyword (e.g. 'let') but found";
-    let (kind, start) = any
+    let kind = any
         .try_map(|token: Token| {
             let Some(kind) = token.declaration_keyword() else {
                 return Err(KclError::Syntax(KclErrorDetails {
-                    source_ranges: token.as_source_ranges(),
                     message: format!("{EXPECTED} {}", token.value.as_str()),
                 }));
             };
 
-            Ok((kind, token.start))
+            Ok(kind)
         })
         .context(Label("declaring a name, e.g. 'let width = 3'"))
         .parse_next(i)?;
@@ -140,16 +124,8 @@ fn declaration(i: TokenSlice) -> PResult<VariableDeclaration> {
     let val = value
         .context(Label("a KCL value, which is being bound to a variable"))
         .parse_next(i)?;
-    let end = val.end();
     Ok(VariableDeclaration {
-        start,
-        end,
-        declarations: vec![VariableDeclarator {
-            start: id.start,
-            end,
-            id,
-            init: val,
-        }],
+        declarations: vec![VariableDeclarator { id, init: val }],
         kind,
     })
 }
@@ -158,14 +134,9 @@ fn declaration(i: TokenSlice) -> PResult<VariableDeclaration> {
 fn identifier(i: TokenSlice) -> PResult<Identifier> {
     any.try_map(|token: Token| {
         if token.token_type == TokenType::Word {
-            Ok(Identifier {
-                start: token.start,
-                end: token.end,
-                name: token.value,
-            })
+            Ok(Identifier { name: token.value })
         } else {
             Err(KclError::Syntax(KclErrorDetails {
-                source_ranges: token.as_source_ranges(),
                 message: format!(
                     "{} is not an identifier, it is a {}",
                     token.value.as_str(),
@@ -190,9 +161,5 @@ fn expression(i: TokenSlice) -> PResult<ExpressionStatement> {
             "an expression (i.e. a value, or an algorithm for calculating one), e.g. 'x + y' or '3' or 'width * 2'",
         ))
         .parse_next(i)?;
-    Ok(ExpressionStatement {
-        start: val.start(),
-        end: val.end(),
-        expression: val,
-    })
+    Ok(ExpressionStatement { expression: val })
 }

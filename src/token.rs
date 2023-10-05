@@ -2,7 +2,7 @@ use parse_display::{Display, FromStr};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{ast::types::VariableKind, SourceRange};
+use crate::ast::types::VariableKind;
 
 /// The types of tokens.
 #[derive(
@@ -35,14 +35,6 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn as_source_range(&self) -> SourceRange {
-        SourceRange([self.start, self.end])
-    }
-
-    pub fn as_source_ranges(&self) -> Vec<SourceRange> {
-        vec![self.as_source_range()]
-    }
-
     /// Is this token the beginning of a variable/function declaration?
     /// If so, what kind?
     /// If not, returns None.
