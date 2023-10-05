@@ -31,7 +31,7 @@ fn main() {
             value: "\"thing\"".to_owned(),
         },
     ];
-    let result = parser::parser_impl::program.parse(&mut tokens.as_slice());
+    let result = parser::parser_impl::declaration.parse(&mut tokens.as_slice());
     eprintln!("{result:#?}");
     let err = result.unwrap_err();
     let stream = err.input();

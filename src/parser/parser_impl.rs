@@ -1,6 +1,5 @@
 use winnow::{
-    combinator::{alt, opt, peek, repeat, separated1},
-    dispatch,
+    combinator::{alt, repeat},
     error::StrContext::Label,
     prelude::*,
     token::any,
@@ -12,27 +11,6 @@ use crate::{
 };
 
 type TokenSlice<'slice, 'input> = &'slice mut &'input [Token];
-
-fn body_item(i: TokenSlice) -> PResult<()> {
-    dispatch! {peek(any);
-        token @ Token { .. } if token.declaration_keyword().is_some() => declaration,
-        _ => expression,
-    }
-    .context(Label(
-        "a KCL program body item, i.e. a declaration or expression",
-    ))
-    .parse_next(i)
-}
-
-pub fn program(i: TokenSlice) -> PResult<()> {
-    let _body: Vec<_> = separated1(body_item, whitespace)
-        .context(Label(
-            "at least one KCL body item, i.e. a declaration or expression",
-        ))
-        .parse_next(i)?;
-    let _ = opt(whitespace).parse_next(i)?.unwrap_or_default();
-    Ok(())
-}
 
 /// Parse a KCL string literal
 pub fn string_literal(i: TokenSlice) -> PResult<Token> {
@@ -87,7 +65,7 @@ fn value(i: TokenSlice) -> PResult<Token> {
 }
 
 /// Parse a variable/constant declaration.
-fn declaration(i: TokenSlice) -> PResult<()> {
+pub fn declaration(i: TokenSlice) -> PResult<()> {
     const EXPECTED: &str = "expected a variable declaration keyword (e.g. 'let') but found";
     let _kind = any
         .try_map(|token: Token| {
