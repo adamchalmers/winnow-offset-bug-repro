@@ -10,6 +10,8 @@ fn main() {
             token_type: TokenType::Whitespace,
             value: " ".to_owned(),
         },
+        // If this token was changed to TokenType::Word and value "asdf",
+        // the parser would succeed.
         Token {
             token_type: TokenType::Keyword,
             value: "let".to_owned(),
