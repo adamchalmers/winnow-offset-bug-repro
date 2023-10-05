@@ -1,9 +1,4 @@
-use winnow::{
-    combinator::{alt, repeat},
-    error::StrContext::Label,
-    prelude::*,
-    token::any,
-};
+use winnow::{combinator::repeat, error::StrContext::Label, prelude::*, token::any};
 
 use crate::{
     errors::{KclError, KclErrorDetails},
@@ -27,23 +22,20 @@ pub fn string_literal(i: TokenSlice) -> PResult<Token> {
 }
 
 /// Parse some whitespace (i.e. at least one whitespace token)
-fn whitespace(i: TokenSlice) -> PResult<Vec<Token>> {
-    repeat(
-        1..,
-        any.try_map(|token: Token| {
-            if token.token_type == TokenType::Whitespace {
-                Ok(token)
-            } else {
-                Err(KclError::Syntax(KclErrorDetails {
-                    message: format!(
-                        "expected whitespace, found '{}' which is {:?}",
-                        token.value.as_str(),
-                        token.token_type
-                    ),
-                }))
-            }
-        }),
-    )
+fn whitespace(i: TokenSlice) -> PResult<Token> {
+    any.try_map(|token: Token| {
+        if token.token_type == TokenType::Whitespace {
+            Ok(token)
+        } else {
+            Err(KclError::Syntax(KclErrorDetails {
+                message: format!(
+                    "expected whitespace, found '{}' which is {:?}",
+                    token.value.as_str(),
+                    token.token_type
+                ),
+            }))
+        }
+    })
     .context(Label("some whitespace (e.g. spaces, tabs, new lines)"))
     .parse_next(i)
 }
@@ -55,13 +47,6 @@ fn equals(i: TokenSlice) -> PResult<Token> {
     })
     .context(Label("the equals operator, ="))
     .parse_next(i)
-}
-
-/// Parse a KCL value
-fn value(i: TokenSlice) -> PResult<Token> {
-    alt((string_literal, identifier))
-        .context(Label("a KCL value (but not a pipe expression)"))
-        .parse_next(i)
 }
 
 /// Parse a variable/constant declaration.
@@ -87,7 +72,7 @@ pub fn declaration(i: TokenSlice) -> PResult<()> {
         .parse_next(i)?;
     equals(i)?;
 
-    value
+    string_literal
         .context(Label("a KCL value, which is being bound to a variable"))
         .parse_next(i)?;
     Ok(())
@@ -115,14 +100,4 @@ fn identifier(i: TokenSlice) -> PResult<Token> {
 /// Matches at least 1 whitespace.
 fn require_whitespace(i: TokenSlice) -> PResult<()> {
     repeat(1.., whitespace).parse_next(i)
-}
-
-/// Parse a KCL expression.
-fn expression(i: TokenSlice) -> PResult<()> {
-    value
-        .context(Label(
-            "an expression (i.e. a value, or an algorithm for calculating one), e.g. 'x + y' or '3' or 'width * 2'",
-        ))
-        .parse_next(i)?;
-    Ok(())
 }
