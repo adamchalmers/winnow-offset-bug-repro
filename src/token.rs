@@ -11,8 +11,6 @@ use crate::{ast::types::VariableKind, SourceRange};
 #[serde(rename_all = "camelCase")]
 #[display(style = "camelCase")]
 pub enum TokenType {
-    /// A number.
-    Number,
     /// A word.
     Word,
     /// An operator.
@@ -21,24 +19,8 @@ pub enum TokenType {
     String,
     /// A keyword.
     Keyword,
-    /// A brace.
-    Brace,
     /// Whitespace.
     Whitespace,
-    /// A comma.
-    Comma,
-    /// A colon.
-    Colon,
-    /// A period.
-    Period,
-    /// A double period: `..`.
-    DoublePeriod,
-    /// A line comment.
-    LineComment,
-    /// A block comment.
-    BlockComment,
-    /// A function name.
-    Function,
 }
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone)]
@@ -60,12 +42,6 @@ impl Token {
             value,
             token_type,
         }
-    }
-    pub fn is_code_token(&self) -> bool {
-        !matches!(
-            self.token_type,
-            TokenType::Whitespace | TokenType::LineComment | TokenType::BlockComment
-        )
     }
 
     pub fn as_source_range(&self) -> SourceRange {

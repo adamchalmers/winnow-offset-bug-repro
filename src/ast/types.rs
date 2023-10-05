@@ -75,7 +75,6 @@ impl BodyItem {
 pub enum Value {
     Literal(Box<Literal>),
     Identifier(Box<Identifier>),
-    UnaryExpression(Box<UnaryExpression>),
 }
 
 impl Value {
@@ -83,7 +82,6 @@ impl Value {
         match self {
             Value::Literal(literal) => literal.start(),
             Value::Identifier(identifier) => identifier.start(),
-            Value::UnaryExpression(unary_expression) => unary_expression.start(),
         }
     }
 
@@ -91,7 +89,6 @@ impl Value {
         match self {
             Value::Literal(literal) => literal.end(),
             Value::Identifier(identifier) => identifier.end(),
-            Value::UnaryExpression(unary_expression) => unary_expression.end(),
         }
     }
 }
@@ -101,7 +98,6 @@ impl Value {
 pub enum BinaryPart {
     Literal(Box<Literal>),
     Identifier(Box<Identifier>),
-    UnaryExpression(Box<UnaryExpression>),
 }
 
 impl BinaryPart {
@@ -109,7 +105,6 @@ impl BinaryPart {
         match self {
             BinaryPart::Literal(literal) => literal.start(),
             BinaryPart::Identifier(identifier) => identifier.start(),
-            BinaryPart::UnaryExpression(unary_expression) => unary_expression.start(),
         }
     }
 
@@ -117,7 +112,6 @@ impl BinaryPart {
         match self {
             BinaryPart::Literal(literal) => literal.end(),
             BinaryPart::Identifier(identifier) => identifier.end(),
-            BinaryPart::UnaryExpression(unary_expression) => unary_expression.end(),
         }
     }
 }
@@ -412,27 +406,6 @@ impl BinaryOperator {
         match &self {
             BinaryOperator::Add | BinaryOperator::Sub => 11,
             BinaryOperator::Mul | BinaryOperator::Div | BinaryOperator::Mod => 12,
-        }
-    }
-}
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
-#[serde(tag = "type")]
-pub struct UnaryExpression {
-    pub start: usize,
-    pub end: usize,
-    pub operator: UnaryOperator,
-    pub argument: BinaryPart,
-}
-
-impl_value_meta!(UnaryExpression);
-
-impl UnaryExpression {
-    pub fn new(operator: UnaryOperator, argument: BinaryPart) -> Self {
-        Self {
-            start: 0,
-            end: argument.end(),
-            operator,
-            argument,
         }
     }
 }
