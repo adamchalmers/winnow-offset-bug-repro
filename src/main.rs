@@ -17,6 +17,11 @@ fn main() {
     eprintln!("{result:#?}");
     let err = result.unwrap_err();
     let stream = err.input();
+
+    // Expectation: I can find the bad token (the token which caused the error
+    // by indexing err.offset() into err.input().
+    // However, this actually gives an index-out-of-bounds panic, because
+    // the offset is 32 and the input slice only has length 2.
     let bad_token = &stream[err.offset()];
     eprintln!("Bad token: {bad_token:?}");
 }
