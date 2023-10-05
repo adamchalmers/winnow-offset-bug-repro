@@ -1,4 +1,3 @@
-use serde_json::Value as JValue;
 use winnow::{
     combinator::{alt, opt, peek, repeat, separated1},
     dispatch,
@@ -8,10 +7,7 @@ use winnow::{
 };
 
 use crate::{
-    ast::types::{
-        BodyItem, ExpressionStatement, Identifier, Literal, Program, Value, VariableDeclaration,
-        VariableDeclarator,
-    },
+    ast::types::{BodyItem, Program, VariableDeclaration, VariableDeclarator},
     errors::{KclError, KclErrorDetails},
     token::{Token, TokenType},
 };
@@ -38,23 +34,17 @@ pub fn program(i: TokenSlice) -> PResult<Program> {
 }
 
 /// Parse a KCL string literal
-pub fn string_literal(i: TokenSlice) -> PResult<Literal> {
-    let (value, token) = any
+pub fn string_literal(i: TokenSlice) -> PResult<Token> {
+    let token = any
         .try_map(|token: Token| match token.token_type {
-            TokenType::String => {
-                let s = token.value[1..token.value.len() - 1].to_string();
-                Ok((JValue::String(s), token))
-            }
+            TokenType::String => Ok(token),
             _ => Err(KclError::Syntax(KclErrorDetails {
                 message: "invalid string literal".to_owned(),
             })),
         })
         .context(Label("string literal (like \"myPart\""))
         .parse_next(i)?;
-    Ok(Literal {
-        value,
-        raw: token.value.clone(),
-    })
+    Ok(token)
 }
 
 /// Parse some whitespace (i.e. at least one whitespace token)
@@ -89,13 +79,10 @@ fn equals(i: TokenSlice) -> PResult<Token> {
 }
 
 /// Parse a KCL value
-fn value(i: TokenSlice) -> PResult<Value> {
-    alt((
-        string_literal.map(Box::new).map(Value::Literal),
-        identifier.map(Box::new).map(Value::Identifier),
-    ))
-    .context(Label("a KCL value (but not a pipe expression)"))
-    .parse_next(i)
+fn value(i: TokenSlice) -> PResult<Token> {
+    alt((string_literal, identifier))
+        .context(Label("a KCL value (but not a pipe expression)"))
+        .parse_next(i)
 }
 
 /// Parse a variable/constant declaration.
@@ -131,10 +118,10 @@ fn declaration(i: TokenSlice) -> PResult<VariableDeclaration> {
 }
 
 /// Parse a KCL identifier (name of a constant/variable/function)
-fn identifier(i: TokenSlice) -> PResult<Identifier> {
+fn identifier(i: TokenSlice) -> PResult<Token> {
     any.try_map(|token: Token| {
         if token.token_type == TokenType::Word {
-            Ok(Identifier { name: token.value })
+            Ok(token)
         } else {
             Err(KclError::Syntax(KclErrorDetails {
                 message: format!(
@@ -155,11 +142,11 @@ fn require_whitespace(i: TokenSlice) -> PResult<()> {
 }
 
 /// Parse a KCL expression.
-fn expression(i: TokenSlice) -> PResult<ExpressionStatement> {
-    let val = value
+fn expression(i: TokenSlice) -> PResult<()> {
+    value
         .context(Label(
             "an expression (i.e. a value, or an algorithm for calculating one), e.g. 'x + y' or '3' or 'width * 2'",
         ))
         .parse_next(i)?;
-    Ok(ExpressionStatement { expression: val })
+    Ok(())
 }

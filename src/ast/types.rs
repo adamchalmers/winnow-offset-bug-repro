@@ -1,5 +1,7 @@
 //! Data types for the AST.
 
+use crate::token::Token;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
     pub body: Vec<BodyItem>,
@@ -7,18 +9,8 @@ pub struct Program {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum BodyItem {
-    ExpressionStatement(ExpressionStatement),
+    ExpressionStatement(()),
     VariableDeclaration(VariableDeclaration),
-}
-#[derive(Debug, Clone, PartialEq)]
-pub enum Value {
-    Literal(Box<Literal>),
-    Identifier(Box<Identifier>),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ExpressionStatement {
-    pub expression: Value,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -42,38 +34,14 @@ pub enum VariableKind {
 #[derive(Debug, Clone, PartialEq)]
 pub struct VariableDeclarator {
     /// The identifier of the variable.
-    pub id: Identifier,
+    pub id: Token,
     /// The value of the variable.
-    pub init: Value,
+    pub init: Token,
 }
 
 impl VariableDeclarator {
-    pub fn new(name: &str, init: Value) -> Self {
-        Self {
-            id: Identifier::new(name),
-            init,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Literal {
-    pub value: serde_json::Value,
-    pub raw: String,
-}
-
-impl From<Literal> for Value {
-    fn from(literal: Literal) -> Self {
-        Value::Literal(Box::new(literal))
-    }
-}
-
-impl Literal {
-    pub fn new(value: serde_json::Value) -> Self {
-        Self {
-            raw: value.to_string(),
-            value,
-        }
+    pub fn new(id: Token, init: Token) -> Self {
+        Self { id, init }
     }
 }
 
