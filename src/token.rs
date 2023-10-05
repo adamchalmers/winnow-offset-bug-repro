@@ -20,21 +20,3 @@ pub struct Token {
     pub token_type: TokenType,
     pub value: String,
 }
-
-impl Token {
-    /// Is this token the beginning of a variable/function declaration?
-    /// If so, what kind?
-    /// If not, returns None.
-    pub fn declaration_keyword(&self) -> Option<VariableKind> {
-        if !matches!(self.token_type, TokenType::Keyword) {
-            return None;
-        }
-        Some(match self.value.as_str() {
-            "var" => VariableKind::Var,
-            "let" => VariableKind::Let,
-            "fn" => VariableKind::Fn,
-            "const" => VariableKind::Const,
-            _ => return None,
-        })
-    }
-}

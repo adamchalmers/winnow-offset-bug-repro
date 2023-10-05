@@ -39,11 +39,11 @@ fn equals(i: TokenSlice) -> PResult<Token> {
 pub fn declaration(i: TokenSlice) -> PResult<()> {
     let _kind = any
         .verify_map(|token: Token| {
-            let Some(kind) = token.declaration_keyword() else {
-                return None;
-            };
-
-            Some(kind)
+            if token.token_type == TokenType::Keyword {
+                Some(())
+            } else {
+                None
+            }
         })
         .parse_next(i)?;
     require_whitespace(i)?;
