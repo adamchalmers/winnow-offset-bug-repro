@@ -67,7 +67,7 @@ fn whitespace(i: TokenSlice) -> PResult<Vec<Token>> {
             } else {
                 Err(KclError::Syntax(KclErrorDetails {
                     message: format!(
-                        "expected whitespace, found '{}' which is {}",
+                        "expected whitespace, found '{}' which is {:?}",
                         token.value.as_str(),
                         token.token_type
                     ),
@@ -138,7 +138,7 @@ fn identifier(i: TokenSlice) -> PResult<Identifier> {
         } else {
             Err(KclError::Syntax(KclErrorDetails {
                 message: format!(
-                    "{} is not an identifier, it is a {}",
+                    "{} is not an identifier, it is a {:?}",
                     token.value.as_str(),
                     token.token_type
                 ),

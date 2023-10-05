@@ -1,7 +1,5 @@
 //! Data types for the AST.
 
-use parse_display::{Display, FromStr};
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
     pub body: Vec<BodyItem>,
@@ -29,8 +27,7 @@ pub struct VariableDeclaration {
     pub kind: VariableKind, // Change to enum if there are specific values
 }
 
-#[derive(Debug, Clone, PartialEq, FromStr, Display)]
-#[display(style = "snake_case")]
+#[derive(Debug, Clone, PartialEq)]
 pub enum VariableKind {
     /// Declare a variable.
     Let,
