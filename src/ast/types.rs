@@ -75,8 +75,6 @@ impl BodyItem {
 pub enum Value {
     Literal(Box<Literal>),
     Identifier(Box<Identifier>),
-    FunctionExpression(Box<FunctionExpression>),
-    CallExpression(Box<CallExpression>),
     UnaryExpression(Box<UnaryExpression>),
 }
 
@@ -85,8 +83,6 @@ impl Value {
         match self {
             Value::Literal(literal) => literal.start(),
             Value::Identifier(identifier) => identifier.start(),
-            Value::FunctionExpression(function_expression) => function_expression.start(),
-            Value::CallExpression(call_expression) => call_expression.start(),
             Value::UnaryExpression(unary_expression) => unary_expression.start(),
         }
     }
@@ -95,8 +91,6 @@ impl Value {
         match self {
             Value::Literal(literal) => literal.end(),
             Value::Identifier(identifier) => identifier.end(),
-            Value::FunctionExpression(function_expression) => function_expression.end(),
-            Value::CallExpression(call_expression) => call_expression.end(),
             Value::UnaryExpression(unary_expression) => unary_expression.end(),
         }
     }
@@ -107,7 +101,6 @@ impl Value {
 pub enum BinaryPart {
     Literal(Box<Literal>),
     Identifier(Box<Identifier>),
-    CallExpression(Box<CallExpression>),
     UnaryExpression(Box<UnaryExpression>),
 }
 
@@ -116,7 +109,6 @@ impl BinaryPart {
         match self {
             BinaryPart::Literal(literal) => literal.start(),
             BinaryPart::Identifier(identifier) => identifier.start(),
-            BinaryPart::CallExpression(call_expression) => call_expression.start(),
             BinaryPart::UnaryExpression(unary_expression) => unary_expression.start(),
         }
     }
@@ -125,7 +117,6 @@ impl BinaryPart {
         match self {
             BinaryPart::Literal(literal) => literal.end(),
             BinaryPart::Identifier(identifier) => identifier.end(),
-            BinaryPart::CallExpression(call_expression) => call_expression.end(),
             BinaryPart::UnaryExpression(unary_expression) => unary_expression.end(),
         }
     }
@@ -246,24 +237,6 @@ pub struct ExpressionStatement {
 }
 
 impl_value_meta!(ExpressionStatement);
-
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
-#[serde(tag = "type")]
-pub struct CallExpression {
-    pub start: usize,
-    pub end: usize,
-    pub callee: Identifier,
-    pub arguments: Vec<Value>,
-    pub optional: bool,
-}
-
-impl_value_meta!(CallExpression);
-
-impl From<CallExpression> for Value {
-    fn from(call_expression: CallExpression) -> Self {
-        Value::CallExpression(Box::new(call_expression))
-    }
-}
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
 #[serde(tag = "type")]
@@ -477,17 +450,6 @@ pub enum UnaryOperator {
     #[display("!")]
     Not,
 }
-
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
-#[serde(tag = "type")]
-pub struct FunctionExpression {
-    pub start: usize,
-    pub end: usize,
-    pub params: Vec<Identifier>,
-    pub body: Program,
-}
-
-impl_value_meta!(FunctionExpression);
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
 #[serde(tag = "type")]

@@ -9,9 +9,8 @@ use winnow::{
 
 use crate::{
     ast::types::{
-        BinaryPart, BodyItem, CallExpression, ExpressionStatement, FunctionExpression, Identifier,
-        Literal, Program, ReturnStatement, UnaryExpression, UnaryOperator, Value,
-        VariableDeclaration, VariableDeclarator,
+        BinaryPart, BodyItem, ExpressionStatement, Identifier, Literal, Program, ReturnStatement,
+        UnaryExpression, UnaryOperator, Value, VariableDeclaration, VariableDeclarator,
     },
     errors::{KclError, KclErrorDetails},
     token::{Token, TokenType},
@@ -160,19 +159,9 @@ fn operand(i: TokenSlice) -> PResult<BinaryPart> {
     let op = possible_operands
         .try_map(|part| {
             let val = match part {
-                // TODO: these should be valid operands eventually,
-                // users should be able to run "let x = f() + g()"
-                // see https://github.com/KittyCAD/modeling-app/issues/783
-                Value::FunctionExpression(_) => {
-                    return Err(KclError::Syntax(KclErrorDetails {
-                        source_ranges: vec![SourceRange([part.start(), part.end()])],
-                        message: TODO_783.to_owned(),
-                    }))
-                }
                 Value::UnaryExpression(x) => BinaryPart::UnaryExpression(x),
                 Value::Literal(x) => BinaryPart::Literal(x),
                 Value::Identifier(x) => BinaryPart::Identifier(x),
-                Value::CallExpression(x) => BinaryPart::CallExpression(x),
             };
             Ok(val)
         })
@@ -233,29 +222,6 @@ fn equals(i: TokenSlice) -> PResult<Token> {
     })
     .context(Label("the equals operator, ="))
     .parse_next(i)
-}
-
-// Looks like
-// (arg0, arg1) => {
-//     const x = arg0 + arg1;
-//     return x
-// }
-fn function_expression(i: TokenSlice) -> PResult<FunctionExpression> {
-    let start = open_paren(i)?.start;
-    let params = parameters(i)?;
-    close_paren(i)?;
-    ignore_whitespace(i);
-    big_arrow(i)?;
-    ignore_whitespace(i);
-    open_brace(i)?;
-    let body = function_body(i)?;
-    let end = close_brace(i)?.end;
-    Ok(FunctionExpression {
-        start,
-        end,
-        params,
-        body,
-    })
 }
 
 /// Parse the body of a user-defined function.
@@ -331,11 +297,7 @@ fn value_but_not_pipe(i: TokenSlice) -> PResult<Value> {
         unary_expression.map(Box::new).map(Value::UnaryExpression),
         bool_value.map(Box::new).map(Value::Identifier),
         literal.map(Box::new).map(Value::Literal),
-        fn_call.map(Box::new).map(Value::CallExpression),
         identifier.map(Box::new).map(Value::Identifier),
-        function_expression
-            .map(Box::new)
-            .map(Value::FunctionExpression),
     ))
     .context(Label("a KCL value (but not a pipe expression)"))
     .parse_next(i)
@@ -346,7 +308,6 @@ fn possible_operands(i: TokenSlice) -> PResult<Value> {
         unary_expression.map(Box::new).map(Value::UnaryExpression),
         bool_value.map(Box::new).map(Value::Identifier),
         literal.map(Box::new).map(Value::Literal),
-        fn_call.map(Box::new).map(Value::CallExpression),
         identifier.map(Box::new).map(Value::Identifier),
     ))
     .context(Label(
@@ -505,26 +466,6 @@ fn ws_with_newline(i: TokenSlice) -> PResult<Token> {
     .parse_next(i)
 }
 
-/// (
-fn open_paren(i: TokenSlice) -> PResult<Token> {
-    some_brace("(", i)
-}
-
-/// )
-fn close_paren(i: TokenSlice) -> PResult<Token> {
-    some_brace(")", i)
-}
-
-/// {
-fn open_brace(i: TokenSlice) -> PResult<Token> {
-    some_brace("{", i)
-}
-
-/// }
-fn close_brace(i: TokenSlice) -> PResult<Token> {
-    some_brace("}", i)
-}
-
 fn comma(i: TokenSlice) -> PResult<()> {
     TokenType::Comma.parse_from(i)?;
     Ok(())
@@ -543,25 +484,4 @@ fn arguments(i: TokenSlice) -> PResult<Vec<Value>> {
     separated0(value, comma_sep)
         .context(Label("function arguments"))
         .parse_next(i)
-}
-
-/// Parameters are declared in a function signature, and used within a function.
-fn parameters(i: TokenSlice) -> PResult<Vec<Identifier>> {
-    separated0(identifier, comma_sep)
-        .context(Label("function parameters"))
-        .parse_next(i)
-}
-
-fn fn_call(i: TokenSlice) -> PResult<CallExpression> {
-    let fn_name = identifier(i)?;
-    let _ = open_paren(i)?;
-    let args = arguments(i)?;
-    let end = close_paren(i)?.end;
-    Ok(CallExpression {
-        start: fn_name.start,
-        end,
-        callee: fn_name,
-        arguments: args,
-        optional: false,
-    })
 }
