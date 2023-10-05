@@ -43,7 +43,6 @@ fn body_item(i: TokenSlice) -> PResult<BodyItem> {
 }
 
 fn program(i: TokenSlice) -> PResult<Program> {
-    ignore_whitespace(i);
     let body: Vec<_> = separated1(body_item, whitespace)
         .context(Label(
             "at least one KCL body item, i.e. a declaration or expression",
@@ -152,9 +151,7 @@ fn declaration(i: TokenSlice) -> PResult<VariableDeclaration> {
             "an identifier, which becomes name you're binding the value to",
         ))
         .parse_next(i)?;
-    ignore_whitespace(i);
     equals(i)?;
-    ignore_whitespace(i);
 
     let val = value
         .context(Label("a KCL value, which is being bound to a variable"))
@@ -195,11 +192,6 @@ fn identifier(i: TokenSlice) -> PResult<Identifier> {
     })
     .context(Label("an identifier, e.g. 'width' or 'myPart'"))
     .parse_next(i)
-}
-
-/// Helper function. Matches any number of whitespace tokens and ignores them.
-fn ignore_whitespace(i: TokenSlice) {
-    let _: PResult<()> = repeat(0.., whitespace).parse_next(i);
 }
 
 /// Matches at least 1 whitespace.
