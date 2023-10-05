@@ -7,30 +7,31 @@ use winnow::{
 };
 
 use crate::{
-    ast::types::{BodyItem, Program, VariableDeclaration, VariableDeclarator},
     errors::{KclError, KclErrorDetails},
     token::{Token, TokenType},
 };
 
 type TokenSlice<'slice, 'input> = &'slice mut &'input [Token];
 
-fn body_item(i: TokenSlice) -> PResult<BodyItem> {
+fn body_item(i: TokenSlice) -> PResult<()> {
     dispatch! {peek(any);
-        token @ Token { .. } if token.declaration_keyword().is_some() => declaration.map(BodyItem::VariableDeclaration),
-        _ => expression.map(BodyItem::ExpressionStatement),
+        token @ Token { .. } if token.declaration_keyword().is_some() => declaration,
+        _ => expression,
     }
-    .context(Label("a KCL program body item, i.e. a declaration or expression"))
+    .context(Label(
+        "a KCL program body item, i.e. a declaration or expression",
+    ))
     .parse_next(i)
 }
 
-pub fn program(i: TokenSlice) -> PResult<Program> {
-    let body: Vec<_> = separated1(body_item, whitespace)
+pub fn program(i: TokenSlice) -> PResult<()> {
+    let _body: Vec<_> = separated1(body_item, whitespace)
         .context(Label(
             "at least one KCL body item, i.e. a declaration or expression",
         ))
         .parse_next(i)?;
     let _ = opt(whitespace).parse_next(i)?.unwrap_or_default();
-    Ok(Program { body })
+    Ok(())
 }
 
 /// Parse a KCL string literal
@@ -86,9 +87,9 @@ fn value(i: TokenSlice) -> PResult<Token> {
 }
 
 /// Parse a variable/constant declaration.
-fn declaration(i: TokenSlice) -> PResult<VariableDeclaration> {
+fn declaration(i: TokenSlice) -> PResult<()> {
     const EXPECTED: &str = "expected a variable declaration keyword (e.g. 'let') but found";
-    let kind = any
+    let _kind = any
         .try_map(|token: Token| {
             let Some(kind) = token.declaration_keyword() else {
                 return Err(KclError::Syntax(KclErrorDetails {
@@ -101,20 +102,17 @@ fn declaration(i: TokenSlice) -> PResult<VariableDeclaration> {
         .context(Label("declaring a name, e.g. 'let width = 3'"))
         .parse_next(i)?;
     require_whitespace(i)?;
-    let id = identifier
+    identifier
         .context(Label(
             "an identifier, which becomes name you're binding the value to",
         ))
         .parse_next(i)?;
     equals(i)?;
 
-    let val = value
+    value
         .context(Label("a KCL value, which is being bound to a variable"))
         .parse_next(i)?;
-    Ok(VariableDeclaration {
-        declarations: vec![VariableDeclarator { id, init: val }],
-        kind,
-    })
+    Ok(())
 }
 
 /// Parse a KCL identifier (name of a constant/variable/function)
