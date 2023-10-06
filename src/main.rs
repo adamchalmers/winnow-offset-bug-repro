@@ -1,18 +1,54 @@
+use std::mem::size_of;
+
 use winnow::{prelude::*, token::any};
 
 fn main() {
     let tokens = [
         Token {
+            token_type: TokenType::Keyword,
+            start: 0,
+            end: 2,
+            value: "fn".to_owned(),
+        },
+        Token {
             token_type: TokenType::Whitespace,
+            start: 2,
+            end: 3,
             value: " ".to_owned(),
         },
-        // If this token was changed to TokenType::Word and value "asdf",
-        // the parser would succeed.
         Token {
-            token_type: TokenType::Keyword,
-            value: "let".to_owned(),
+            token_type: TokenType::Word,
+            start: 3,
+            end: 13,
+            value: "firstPrime".to_owned(),
+        },
+        Token {
+            token_type: TokenType::Whitespace,
+            start: 13,
+            end: 14,
+            value: " ".to_owned(),
+        },
+        Token {
+            token_type: TokenType::Operator,
+            start: 14,
+            end: 15,
+            value: "=".to_owned(),
+        },
+        Token {
+            token_type: TokenType::Whitespace,
+            start: 15,
+            end: 16,
+            value: " ".to_owned(),
+        },
+        Token {
+            token_type: TokenType::Brace,
+            start: 16,
+            end: 17,
+            value: "(".to_owned(),
         },
     ];
+
+    println!("{}", size_of::<Token>());
     let result = declaration.parse(&mut tokens.as_slice());
     eprintln!("{result:#?}");
     let err = result.unwrap_err();
@@ -31,28 +67,55 @@ type TokenSlice<'slice, 'input> = &'slice mut &'input [Token];
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum TokenType {
+    /// A number.
+    Number,
+    /// A word.
     Word,
+    /// An operator.
+    Operator,
+    /// A string.
+    String,
+    /// A keyword.
     Keyword,
+    /// A brace.
+    Brace,
+    /// Whitespace.
     Whitespace,
+    /// A comma.
+    Comma,
+    /// A colon.
+    Colon,
+    /// A period.
+    Period,
+    /// A double period: `..`.
+    DoublePeriod,
+    /// A line comment.
+    LineComment,
+    /// A block comment.
+    BlockComment,
+    /// A function name.
+    Function,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Token {
     pub token_type: TokenType,
+    pub start: usize,
+    pub end: usize,
     pub value: String,
 }
 
 /* Parsers */
 
-/// Parse some whitespace (i.e. at least one whitespace token)
-fn whitespace(i: TokenSlice) -> PResult<Token> {
-    any.verify(|token: &Token| token.token_type == TokenType::Whitespace)
-        .parse_next(i)
-}
-
 /// Parse a variable/constant declaration.
 pub fn declaration(i: TokenSlice) -> PResult<()> {
-    whitespace.parse_next(i)?;
+    any.parse_next(i)?;
+    any.parse_next(i)?;
+    any.parse_next(i)?;
+    any.parse_next(i)?;
+    any.parse_next(i)?;
+    any.parse_next(i)?;
+    any.parse_next(i)?;
     identifier.parse_next(i)?;
     Ok(())
 }
